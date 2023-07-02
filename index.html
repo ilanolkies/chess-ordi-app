@@ -4,10 +4,22 @@
     <title>chess ordi</title>
   </head>
   <body>
-    <p id="t">Loading...</p>
-    <p id="n"></p>
-    <p id="moves"></p>
+    <p id="n">Loading...</p>
     <div id="board"></div>
+    <label>Inscription data</label>
+    <a id="t" target="_blank"></a>
+    <p id="r"></p>
+    <label>Previous moves</label>
+
+    <table>
+      <thead>
+        <tr>
+          <th>move</th>
+          <th>ordi</th>
+        </tr>
+      </thead>
+      <tbody id="moves"></tbody>
+    </table>
 
     <script type="module">
       import { Chess } from 'https://www.unpkg.com/chess.js@1.0.0-beta.6/dist/esm/chess.js'
@@ -20,20 +32,45 @@
       }
 
       async function main() {
-        const moves = [await getContentFromApi('/content/' + query)]
-        while (moves[0].p !== 'chess') {
-          moves.unshift(await getContentFromApi(moves[0].on))
+        const m = '/content/' + query
+        console.log(m)
+        const moves = [{ m, c: await getContentFromApi(m) }]
+        while (moves[0].c.p !== 'chess') {
+          const m = moves[0].c.on
+          moves.unshift({ m, c: await getContentFromApi(m) })
         }
+
+        console.log('a')
+
+        document.getElementById('t').innerHTML = query.slice(0, 3) + '...' + query.slice(-5)
+        document.getElementById('t').setAttribute('href', apiUrl + '/inscription/' + query)
+        document.getElementById('r').innerHTML = JSON.stringify(moves[moves.length-1].c)
+        document.getElementById('n').innerHTML = moves[moves.length-1].c.n
+
+        const t = document.getElementById('moves')
 
         const game = new Chess()
 
         for (const move of moves.slice(1)) {
-          game.move(move.move)
-        }
+          game.move(move.c.move)
 
-        document.getElementById('t').innerHTML = query
-        document.getElementById('n').innerHTML = moves[moves.length-1].n
-        document.getElementById('moves').innerHTML = game.history().join(',')
+          const tr = document.createElement('tr')
+
+          const m = document.createElement('td')
+          m.innerHTML = move.c.move
+          tr.appendChild(m)
+
+          const o = document.createElement('td')
+
+          const a = document.createElement('a')
+          a.setAttribute('href', apiUrl + move.m.replace('/content/', '/inscription/'))
+          a.setAttribute('target', '_bblank')
+          a.innerHTML = move.m
+          o.appendChild(a)
+          tr.appendChild(o)
+          
+          t.appendChild(tr)
+        }
 
         const b = document.getElementById('board')
 

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>chess ordi</title>
+  </head>
+  <body>
+    <p id="t">Loading...</p>
+    <p id="n"></p>
+    <p id="moves"></p>
+    <textarea id="game" style="width: 270px; height: 190px;"></textarea>
+
+    <script type="module">
+      import { Chess } from 'https://www.unpkg.com/chess.js@1.0.0-beta.6/dist/esm/chess.js'
+      
+      const apiUrl = 'https://ordinals.com'
+      const query = new URLSearchParams(window.location.search).get('g')
+
+      function getContentFromApi(contentUri) {
+        return fetch(apiUrl + contentUri).then(r => r.json())
+      }
+
+      async function main() {
+        const moves = [await getContentFromApi('/content/' + query)]
+        while (moves[0].p !== 'chess') {
+          moves.unshift(await getContentFromApi(moves[0].on))
+        }
+
+        const game = new Chess()
+
+        for (const move of moves.slice(1)) {
+          game.move(move.move)
+        }
+
+        document.getElementById('t').innerHTML = query
+        document.getElementById('n').innerHTML = moves[moves.length-1].n
+        document.getElementById('moves').innerHTML = game.history().join(',')
+        document.getElementById('game').value = game.ascii()
+
+        console.log(game.ascii())
+      }
+
+      main()
+    </script>
+  </body>
+</html>

@@ -6,6 +6,8 @@
 </head>
 
 <body>
+  <input id="search" type="text" placeholder="search by id" />
+  <button id="searchb">search</button>
   <h1 id="n">Loading...</h1>
   <div>
     <div id="board"></div>
@@ -72,6 +74,10 @@
 
       document.body.removeChild(element)
     }
+
+    document.getElementById('searchb').addEventListener('click', () => {
+      window.location.href = window.location.href.split('g=')[0] + 'g=' + document.getElementById('search').value
+    })
   
     async function main() {
       const moves = [{ m, c: await getContentFromApi(m) }]

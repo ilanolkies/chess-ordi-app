@@ -44,9 +44,36 @@
     </table>
   </div>
 
+  <h2>Latest data</h2>
+  <label>last height</label><p id="lh"></p>
+  <table>
+    <thead>
+      <tr>
+        <th>game</th>
+        <th>moves</th>
+        <th>inscription</th>
+        <th>notes</th>
+      </tr>
+    </thead>
+    <tbody id="staticdata"></tbody>
+  </table>
+
+  <button onclick="loadData()" hidden>load</button>
+  <p id="datanote"></p>
+  <table>
+    <thead>
+      <tr id="datah">
+
+      </tr>
+    </thead>
+    <tbody id="data"></tbody>
+  </table>
 
   <script type="module">
     import { Chess } from 'https://www.unpkg.com/chess.js@1.0.0-beta.6/dist/esm/chess.js'
+    import games from './games.json' assert { type: 'json' }
+    import last from './last.json' assert { type: 'json' }
+    import notes from './notes.json' assert { type: 'json' }
 
     const apiUrl = 'https://ordinals.com'
     const query = new URLSearchParams(window.location.search).get('g')
@@ -75,8 +102,12 @@
       document.body.removeChild(element)
     }
 
+    function getUrlForId(id) {
+      return window.location.href.split('g=')[0] + 'g=' + id
+    }
+
     document.getElementById('searchb').addEventListener('click', () => {
-      window.location.href = window.location.href.split('g=')[0] + 'g=' + document.getElementById('search').value
+      window.location.href = getUrlForId(document.getElementById('search').value)
     })
   
     async function main() {
@@ -107,9 +138,9 @@
         const o = document.createElement('td')
 
         const a = document.createElement('a')
-        a.setAttribute('href', apiUrl + move.m.replace('/content/', '/inscription/'))
-        a.setAttribute('target', '_blank')
-        a.innerHTML = move.m
+        const id = move.m.split('/content/')[1]
+        a.setAttribute('href', getUrlForId(id))
+        a.innerHTML = id
         o.appendChild(a)
         tr.appendChild(o)
 
@@ -132,7 +163,7 @@
 
         } catch(e) {
           document.getElementById('nexte').innerHTML = e.message
-          document.getElementById('nextb').addAttribute('disabled')
+          document.getElementById('nextb').setAttribute('disabled', true)
         }
       })
 
@@ -158,6 +189,59 @@
         }
         b.appendChild(rd)
       }
+    }
+
+    const sd = document.getElementById('staticdata')
+
+    for (const id of Object.keys(games)) {
+      const tr = document.createElement('tr')
+
+      const m = document.createElement('td')
+      m.innerHTML = games[id].g
+      tr.appendChild(m)
+
+      const g = document.createElement('td')
+      g.innerHTML = games[id].n || ''
+      tr.appendChild(g)
+
+      const ins = document.createElement('td')
+      const a = document.createElement('a')
+      a.setAttribute('href', getUrlForId(id))
+      a.innerHTML = id
+      ins.appendChild(a)
+      tr.appendChild(ins)
+      
+      const n = document.createElement('td')
+      n.innerHTML = notes[id] || ''
+      tr.appendChild(n)
+
+      sd.appendChild(tr)
+    }
+
+    const lh = document.getElementById('lh')
+    lh.innerHTML = last.h
+
+    window.loadData = async function() {
+      document.getElementById('datanote').innerHTML = 'Loading...'
+      const dh = document.getElementById('datah')
+      const d = document.getElementById('data')
+      const data = await fetch('http://localhost:8080').then(r => r.json())
+
+      Object.keys(data.detail[0]).forEach(k => {
+        const td = document.createElement('th')
+        td.innerHTML = k
+        dh.appendChild(td)
+      })
+      for (const inscription of data.detail) {
+        const tr = document.createElement('tr')
+        for (const v of Object.values(inscription)) {
+          const td = document.createElement('td')
+          td.innerHTML = v
+          tr.appendChild(td)
+        }
+        d.appendChild(tr)
+      }
+      document.getElementById('datanote').innerHTML = ''
     }
 
     main().catch(e => document.getElementById('n').innerHTML = e.message)

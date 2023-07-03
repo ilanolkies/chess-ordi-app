@@ -71,9 +71,6 @@
 
   <script type="module">
     import { Chess } from 'https://www.unpkg.com/chess.js@1.0.0-beta.6/dist/esm/chess.js'
-    import games from './games.json' assert { type: 'json' }
-    import last from './last.json' assert { type: 'json' }
-    import notes from './notes.json' assert { type: 'json' }
 
     const apiUrl = 'https://ordinals.com'
     const query = new URLSearchParams(window.location.search).get('g')
@@ -190,6 +187,10 @@
         b.appendChild(rd)
       }
     }
+
+    const games = await fetch('games.json').then(r => r.json())
+    const notes = await fetch('notes.json').then(r => r.json())
+    const last = await fetch('last.json').then(r => r.json())
 
     const sd = document.getElementById('staticdata')
 

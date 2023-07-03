@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>chess ordi</title>
+</head>
+
+<body>
+  <input id="search" type="text" placeholder="search by id" />
+  <button id="searchb">search</button>
+  <h1 id="n">Loading...</h1>
+  <div>
+    <div id="board"></div>
+  </div>
+
+  <h2>Make next move</h2>
+  <div>
+    <input id="nextm" type="text" placeholder="chess move" />
+    <input id="nextn" type="text" placeholder="game name" />
+    <button id="nextb" disabled="true">download json</button>
+    <small id="nexte"></small>
+  </div>
+
+  <label>Inscription data</label>
+  <div>
+    <p><a id="t" target="_blank"></a></p>
+  </div>
+
+  <div>
+    <label>Raw json</label>
+    <p id="r"></p>
+  </div>
+
+  <div>
+    <label>Previous moves</label>
+    <table>
+      <thead>
+        <tr>
+          <th>move</th>
+          <th>ordi</th>
+        </tr>
+      </thead>
+      <tbody id="moves"></tbody>
+    </table>
+  </div>
+
+  <h2>Latest data</h2>
+  <button onclick="loadData()">load</button>
+  <p id="datanote"></p>
+  <table>
+    <thead>
+      <tr id="datah">
+
+      </tr>
+    </thead>
+    <tbody id="data"></tbody>
+  </table>
+
+  <script type="module">
+    import { Chess } from 'https://www.unpkg.com/chess.js@1.0.0-beta.6/dist/esm/chess.js'
+    import data from './data.json' with {type: 'json'}
+
+    console.log(data)
+
+    const apiUrl = 'https://ordinals.com'
+    const query = new URLSearchParams(window.location.search).get('g')
+    const m = '/content/' + query
+
+    function getContentFromApi(contentUri) {
+      return fetch(apiUrl + contentUri).then(r => r.json())
+    }
+
+    window.downloadJson = function downloadJson() {
+      const next = document.getElementById('nextm')
+      const json = { move: next.value, on: m }
+      const n = document.getElementById('nextn').value
+      if (n) json.n = n
+      
+      var element = document.createElement('a')
+      console.log(json)
+      element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(json)))
+      element.setAttribute('download', json.move + '.json')
+
+      element.style.display = 'none'
+      document.body.appendChild(element)
+
+      element.click()
+
+      document.body.removeChild(element)
+    }
+
+    document.getElementById('searchb').addEventListener('click', () => {
+      window.location.href = window.location.href.split('g=')[0] + 'g=' + document.getElementById('search').value
+    })
+  
+    async function main() {
+      const moves = [{ m, c: await getContentFromApi(m) }]
+      while (moves[0].c.p !== 'chess') {
+        const m = moves[0].c.on
+        moves.unshift({ m, c: await getContentFromApi(m) })
+      }
+
+      document.getElementById('t').innerHTML = m
+      document.getElementById('t').setAttribute('href', apiUrl + '/inscription/' + query)
+      document.getElementById('r').innerHTML = JSON.stringify(moves[moves.length - 1].c)
+      document.getElementById('n').innerHTML = moves[moves.length - 1].c.n
+
+      const t = document.getElementById('moves')
+
+      const game = new Chess()
+
+      for (const move of moves.slice(1)) {
+        game.move(move.c.move)
+
+        const tr = document.createElement('tr')
+
+        const m = document.createElement('td')
+        m.innerHTML = move.c.move
+        tr.appendChild(m)
+
+        const o = document.createElement('td')
+
+        const a = document.createElement('a')
+        a.setAttribute('href', apiUrl + move.m.replace('/content/', '/inscription/'))
+        a.setAttribute('target', '_blank')
+        a.innerHTML = move.m
+        o.appendChild(a)
+        tr.appendChild(o)
+
+        t.appendChild(tr)
+      }
+
+      const next = document.getElementById('nextm')
+      next.addEventListener('input', (e) => {
+        const nextBoard = new Chess(game.fen())
+        try {
+          if (!next.value) throw ''
+          nextBoard.move(next.value)
+
+          document.getElementById('nexte').innerHTML = ''
+
+          const b = document.getElementById('nextb')
+          b.removeAttribute('disabled')
+
+          b.setAttribute('onclick', 'downloadJson()')
+
+        } catch(e) {
+          document.getElementById('nexte').innerHTML = e.message
+          document.getElementById('nextb').setAttribute('disabled', true)
+        }
+      })
+
+      const b = document.getElementById('board')
+
+      const gameBoard = game.board()
+
+      for (let r = 0; r < gameBoard.length; r++) {
+        const rd = document.createElement('div')
+        rd.setAttribute('style', 'display: flex; margin: 0;')
+        for (let c = 0; c < gameBoard[r].length; c++) {
+          const cd = document.createElement('div')
+          cd.setAttribute('style', 'float: left; width: 45px; height: 45px;')
+          const p = gameBoard[r][c]
+          const i = document.createElement('img')
+          if (p) {
+            i.setAttribute('src', 'img/Chess_' + p.type + (p.color === 'w' ? 'l' : 'd') + (r % 2 + c % 2 === 1 ? 'd' : 'l') + '45.svg')
+          } else {
+            i.setAttribute('src', 'img/Chess_' + (r % 2 + c % 2 === 1 ? 'b' : 'l') + '.svg')
+          }
+          cd.append(i)
+          rd.appendChild(cd)
+        }
+        b.appendChild(rd)
+      }
+    }
+
+    window.loadData = async function() {
+      document.getElementById('datanote').innerHTML = 'Loading...'
+      const dh = document.getElementById('datah')
+      const d = document.getElementById('data')
+      const data = await fetch('http://localhost:8080').then(r => r.json())
+
+      Object.keys(data.detail[0]).forEach(k => {
+        const td = document.createElement('th')
+        td.innerHTML = k
+        dh.appendChild(td)
+      })
+      for (const inscription of data.detail) {
+        const tr = document.createElement('tr')
+        for (const v of Object.values(inscription)) {
+          const td = document.createElement('td')
+          td.innerHTML = v
+          tr.appendChild(td)
+        }
+        d.appendChild(tr)
+      }
+      document.getElementById('datanote').innerHTML = ''
+    }
+
+    main().catch(e => document.getElementById('n').innerHTML = e.message)
+  </script>
+</body>
+
+</html>
